@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>websocketchat</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.bootcss.com/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <audio src="http://att.chinauui.com/day_161202/65_38_rBBGeVYiT8-AWS28AABUaNna_oM815.mp3" id="omusic"></audio>
+        <div id="chat" style="padding-bottom: 38px;"></div>
+        <!-- 输入框 -->
+        <div class="input-group fixed-bottom">
+            <input type="text" class="form-control" placeholder="发点啥" aria-label="Recipient's username" id="msg"
+                aria-describedby="basic-addon2">
+            <div class="input-group-append">
+                <button class="btn btn-primary btn-sm" id="btnSend">发送</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+<!-- 模态框 -->
+<div class="modal fade" tabindex="-1" role="dialog" id="tipLinkSuc" data-backdrop="static" keyboard="false">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">连接提示</h5>
+            </div>
+            <div class="modal-body">
+                <p>连接服务器成功，输入用户名就可以聊天了!</p>
+                <div class="input-group mb-3">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text" id="basic-addon1">用户名</span>
+                    </div>
+                    <input type="text" class="form-control" placeholder="Username" aria-label="Username"
+                        aria-describedby="basic-addon1" id="username">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="getUserName">确定</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://cdn.bootcss.com/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script>
+    //0:正常会话  1:enter  2:leavel
+    $(function () {
+        // var ws = new WebSocket("ws://localhost:4000");
+        var ws = new WebSocket("ws://9240.fun:4000");
+        ws.onopen = function () {
+            $("#tipLinkSuc").modal('show')
+        }
+        $("#getUserName").click(function () {
+            if ($("#username").val() != "") {
+                localStorage.setItem("userName", $("#username").val())
+                $("#tipLinkSuc").modal('hide')
+                ws.send(JSON.stringify({
+                    msg: $("#username").val(),
+                    type: 1
+                }))
+            } else {
+                $("#username").css("border", "1px solid red")
+            }
+        })
+        $("#msg").bind("keydown", function (event) {
+            if (event.keyCode == "13") {
+                if($("#msg").val()!=""){
+                    ws.send(JSON.stringify({
+                        msg: $("#msg").val(),
+                        type: 0
+                    }))
+                    $("#msg").css("border", "1px solid #ced4da")
+                    $("#msg").val("")
+                }else{
+                    $("#msg").css("border", "1px solid red")
+                }
+            }
+        })
+        $("#btnSend").click(function(){
+            if($("#msg").val()!=""){
+                ws.send(JSON.stringify({
+                    msg: $("#msg").val(),
+                    type: 0
+                }))
+                $("#msg").val("")
+                $("#msg").css("border", "1px solid #ced4da")
+            }else{
+                $("#msg").css("border", "1px solid red")
+            }
+        })
+        ws.onmessage = function (event) {
+            // console.log(JSON.parse(event.data))
+            var context = JSON.parse(event.data)
+            // 显示消息
+            if (context.type == 1) {
+                $("#chat").append(`<p style="text-align:center;">欢迎<span style="color:red;">${context.msg}</span>进入聊天室</p>`)
+            } else if (context.type == 0) {
+                if (context.userName != localStorage.getItem("userName")) {
+                    document.querySelector("#omusic").play()
+                    $("#chat").append(`<h4>${context.userName}：<span class="bg-success rounded" style="padding:2px;">${context.msg}</span></h4>`)
+                } else {
+                    $("#chat").append(`<h4 style="text-align:right;"><span class="bg-success" style="border-radius: 5px 5px 5px 5px;padding:2px;">${context.msg}</span>：${context.userName}</h4>`)
+                }
+            }
+            //消息滚动
+            var mHeight = ($(window).height()-$(".fixed-bottom").height())-$("#chat").height()
+            if(mHeight<0){
+                window.scroll(0,-mHeight)
+            }
+        }
+        ws.close = function () {
+            localStorage.setItem("userName", null)
+        }
+    })
+</script>
